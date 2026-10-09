@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>vrhd</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{background:#000;color:#fff;font:14px/1.3 ui-monospace,Menlo,Consolas,monospace;min-height:100%}
+svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:square;flex:none}
+button,input{font:inherit}
+
+/* ── вход ── */
+#gate{min-height:100vh;display:grid;place-items:center;padding:24px}
+#gate form{width:min(360px,100%);display:grid;gap:10px}
+#gate input{background:#000;color:#fff;border:1px solid #fff;padding:13px 12px;outline:0;width:100%}
+#gate input:focus{outline:2px solid #fff;outline-offset:2px}
+#gate button{background:#fff;color:#000;border:1px solid #fff;padding:13px;font-weight:700;cursor:pointer}
+#gate button:hover:not(:disabled),#gate button:focus-visible{background:#000;color:#fff;outline:0}
+#gate button:disabled{cursor:progress}
+#ge{background:#fff;color:#000;padding:8px 12px;font-weight:700}
+
+/* ── шапка ── */
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid #fff;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;flex-wrap:wrap}
+#path{display:flex;gap:8px;flex-wrap:wrap;min-width:0;font-size:15px}
+#path a{cursor:pointer;padding:0 3px}
+#path a:hover{background:#fff;color:#000}
+.r{display:flex;gap:8px;flex-wrap:wrap}
+.btn{height:34px;padding:0 12px;display:flex;align-items:center;gap:7px;background:#000;color:#fff;border:1px solid #fff;cursor:pointer;white-space:nowrap}
+.btn:hover,.btn:focus-visible{background:#fff;color:#000;outline:0}
+.btn.sq{width:34px;padding:0;justify-content:center}
+
+#hint{padding:10px 16px 0;opacity:.75}
+
+/* ── сетка ── */
+main{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px 16px;padding:16px 16px 96px}
+body.d main{outline:1px dashed #fff;outline-offset:-8px}
+.cell{min-width:0}
+.tile{position:relative;aspect-ratio:1;border:1px solid #fff;cursor:pointer;overflow:hidden;display:grid;place-items:center}
+.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.tile.ico:hover{background:#fff;color:#000}
+.tile .big{width:46px;height:46px;stroke-width:1.5}
+.pend .tile,.mark .tile{border-style:dashed}
+.mark img,.mark .big{opacity:.3}
+.pend .tag,.mark .tag{position:absolute;left:0;bottom:0;right:0;background:#fff;color:#000;padding:3px 6px;font-size:12px;font-weight:700}
+.upcell .tile{border-style:dashed}
+.upl{display:block;margin-top:7px;padding:2px 0;border-bottom:1px solid transparent}
+
+.name{display:block;width:100%;margin-top:7px;padding:2px 0;background:none;border:0;border-bottom:1px dotted #fff;
+  color:#fff;outline:0;text-overflow:ellipsis;cursor:text}
+.name:hover{border-bottom-style:solid}
+.name:focus{border-bottom-style:solid;background:#fff;color:#000;padding:2px 4px}
+
+.cp,.rm,.del{position:absolute;top:0;right:0;width:32px;height:32px;display:grid;place-items:center;
+  background:#fff;color:#000;border:0;cursor:pointer}
+.del{right:auto;left:0}
+.cp:hover,.rm:hover,.del:hover,.cp:focus-visible,.rm:focus-visible,.del:focus-visible{background:#000;color:#fff;outline:1px solid #fff;outline-offset:-1px}
+
+.empty{grid-column:1/-1;min-height:220px;border:1px dashed #fff;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-size:15px;text-align:center;padding:16px}
+.empty:hover{background:#fff;color:#000}
+
+#go{position:fixed;right:16px;bottom:16px;height:48px;padding:0 18px;display:flex;align-items:center;gap:9px;
+  background:#fff;color:#000;border:1px solid #fff;font-weight:700;cursor:pointer;z-index:6}
+#go:hover:not(:disabled),#go:focus-visible{background:#000;color:#fff;outline:0}
+#go:disabled{cursor:progress}
+
+#pv{position:fixed;inset:0;z-index:20;background:#000;display:grid;place-items:center;cursor:zoom-out}
+#pi{max-width:96vw;max-height:96vh;object-fit:contain}
+#pa{text-align:center;padding:20px;cursor:default}
+#au{width:min(480px,88vw)}
+#pn{margin-top:14px;word-break:break-all}
+
+#t{position:fixed;left:16px;bottom:16px;z-index:30;max-width:calc(100vw - 150px);background:#fff;color:#000;padding:8px 12px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="gate" hidden>
+  <form id="gf">
+    <input id="gi" type="password" placeholder="API token" autocomplete="off" spellcheck="false" autofocus>
+    <button id="gb">Войти</button>
+    <p id="ge" hidden></p>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <nav id="path"></nav>
+    <div class="r">
+      <button class="btn" id="addb"></button>
+      <button class="btn" id="fob"></button>
+      <button class="btn sq" id="refb" aria-label="Обновить список" title="Обновить список"></button>
+      <button class="btn sq" id="out" aria-label="Выйти" title="Выйти"></button>
+    </div>
+  </header>
+  <p id="hint"></p>
+  <main id="main"></main>
+  <button id="go" hidden></button>
+</div>
+
+<div id="pv" hidden><img id="pi" alt=""><div id="pa" hidden><audio id="au" controls></audio><p id="pn"></p></div></div>
+<div id="t" hidden></div>
+<input type="file" id="fi" multiple accept=".png,.jpg,.jpeg,.gif,.mp3,image/png,image/jpeg,image/gif,audio/mpeg" hidden>
+
+<script>
+const C = {
+  owner:  'narrayt',
+  repo:   'vrhd',
+  branch: 'main',
+  token:  ''
+};
+
+const $ = s => document.querySelector(s);
+const EX = ['png','jpg','jpeg','gif','mp3'];
+const MIME = {'image/png':'png','image/jpeg':'jpg','image/gif':'gif','audio/mpeg':'mp3'};
+const API  = `https://api.github.com/repos/${C.owner}/${C.repo}`;
+const RAW  = `https://raw.githubusercontent.com/${C.owner}/${C.repo}/${C.branch}/`;
+const SITE = `https://${C.owner}.github.io/${C.repo}/`;
+const enc  = p => p.split('/').map(encodeURIComponent).join('/');
+const ext  = n => (n.includes('.') ? n.split('.').pop() : '').toLowerCase();
+const isOk = n => EX.includes(ext(n));
+
+const latin = s => s.replace(/[\s\\/]+/g,'-').replace(/[^A-Za-z0-9._-]/g,'');
+const clean = s => latin(s.trim()).replace(/^[.-]+/,'');
+
+const I = {
+  plus:  '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  fplus: '<svg viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/><path d="M12 11v6M9 14h6"/></svg>',
+  dir:   '<svg class="big" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/></svg>',
+  back:  '<svg class="big" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  play:  '<svg class="big" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  cp:    '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11"/><path d="M5 15V4h11"/></svg>',
+  ok:    '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>',
+  x:     '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>',
+  up:    '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  out:   '<svg viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h11M16 8l4 4-4 4"/></svg>'
+};
+$('#addb').innerHTML = I.plus  + '<span>Файлы</span>';
+$('#fob').innerHTML  = I.fplus + '<span>Новая папка</span>';
+$('#out').innerHTML  = I.out;
+$('#refb').innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5"/></svg>';
+$('#refb').onclick = async () => { await load(); toast('Список обновлён'); };
+
+let dels = new Set();
+let tree = [], pend = [], cur = '', busy = false, pl = [], pi = -1;
+
+let tt;
+function toast(m){ const e=$('#t'); e.textContent=m; e.hidden=false; clearTimeout(tt); tt=setTimeout(()=>e.hidden=true,3000); }
+
+const tok = () => C.token || localStorage.getItem('t') || '';
+
+function gate(msg){
+  $('#app').hidden = true; $('#gate').hidden = false;
+  const e = $('#ge'); e.hidden = !msg; e.textContent = msg || '';
+  $('#gi').value = ''; $('#gi').focus();
+}
+async function check(t){
+  const r = await fetch(API, {cache:'no-store', headers:{Accept:'application/vnd.github+json', Authorization:'Bearer ' + t}});
+  if (r.status === 401) throw new Error('Неверный токен');
+  if (r.status === 404) throw new Error('Нет доступа к ' + C.owner + '/' + C.repo);
+  if (!r.ok) throw new Error('Ошибка ' + r.status);
+  const d = await r.json();
+  if (d.permissions && d.permissions.push === false) throw new Error('Нет прав на запись');
+}
+function enter(){
+  $('#gate').hidden = true; $('#app').hidden = false;
+  cur = readHash(); render(); load();
+}
+$('#gf').onsubmit = async e => {
+  e.preventDefault();
+  const t = $('#gi').value.trim(); if (!t) return;
+  const b = $('#gb'); b.disabled = true; b.textContent = '…';
+  try{ await check(t); localStorage.setItem('t', t); enter(); }
+  catch(err){ const m = $('#ge'); m.hidden = false; m.textContent = err.message; $('#gi').select(); }
+  b.disabled = false; b.textContent = 'Войти';
+};
+$('#out').onclick = () => { localStorage.removeItem('t'); location.hash = ''; location.reload(); };
+
+async function gh(p, o={}){
+  const h = {Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', Authorization:'Bearer ' + tok()};
+  if (o.body) h['Content-Type'] = 'application/json';
+  const r = await fetch(API + p, {...o, headers:h, cache:'no-store'});
+  if (!r.ok){
+    if (r.status === 401){ localStorage.removeItem('t'); gate('Токен недействителен'); }
+    let m=''; try{ m=(await r.json()).message; }catch{}
+    throw new Error(r.status + ' ' + m);
+  }
+  return r.json();
+}
+
+const cpath = p => '/contents/' + enc(p);
+const put = (path, content, msg, sha) => {
+  const body = {message:msg, content, branch:C.branch};
+  if (sha) body.sha = sha;
+  return gh(cpath(path), {method:'PUT', body:JSON.stringify(body)});
+};
+const del = (path, sha, msg) =>
+  gh(cpath(path), {method:'DELETE', body:JSON.stringify({message:msg, sha, branch:C.branch})});
+const shaOf = p => (tree.find(x => x.type==='blob' && x.path===p) || {}).sha;
+
+async function retry(fn){
+  for (let a = 1; ; a++){
+    try{ return await fn(); }
+    catch(e){
+      if (a >= 4 || !/^409/.test(e.message)) throw e;
+      await new Promise(r => setTimeout(r, 500 * a));
+    }
+  }
+}
+const b64 = f => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(f); });
+
+async function load(){
+  try{ tree = (await gh(`/git/trees/${C.branch}?recursive=1`)).tree; }
+  catch(e){ toast(e.message); }
+  render();
+}
+
+function cell(tileHTML, name, icon){
+  const c = document.createElement('div'); c.className = 'cell';
+  const t = document.createElement('div'); t.className = 'tile' + (icon ? ' ico' : ''); t.innerHTML = tileHTML;
+  const n = document.createElement('input'); n.className = 'name'; n.value = name; n.readOnly = true; n.spellcheck = false; n.autocomplete = 'off';
+  n.setAttribute('autocapitalize','off'); n.setAttribute('autocorrect','off'); n.setAttribute('inputmode','url');
+  n.title = 'Переименовать';
+  n.addEventListener('input', () => {
+    const v = latin(n.value);
+    if (v !== n.value){
+      const pos = Math.max(0, (n.selectionStart || 0) - (n.value.length - v.length));
+      n.value = v; n.setSelectionRange(pos, pos);
+      toast('Только латиница: a-z, 0-9, - _ .');
+    }
+  });
+  c.append(t, n);
+  return {c, t, n};
+}
+function bindName(n, fn){
+  let o = n.value;
+  n.onclick = () => {
+    if (!n.readOnly) return;
+    n.readOnly = false; n.focus();
+    const i = n.value.lastIndexOf('.');
+    n.setSelectionRange(0, i>0 ? i : n.value.length);
+  };
+  n.onkeydown = e => { if (e.key==='Enter') n.blur(); if (e.key==='Escape'){ n.value=o; n.blur(); } };
+  n.onblur = () => {
+    n.readOnly = true;
+    if (n.value === o) return;
+    fn(n.value).then(ok => { if (ok) o = n.value; else n.value = o; });
+  };
+}
+const taken = (d, n) => { const P=(d?d+'/':'')+n; return tree.some(x=>x.path===P || x.path.startsWith(P+'/')) || pend.some(q=>q.dir===d && q.name===n); };
+
+function render(){
+  if ($('#app').hidden) return;
+  const prefix = cur ? cur + '/' : '';
+  const root = !cur;
+
+  $('#addb').hidden = root;
+  $('#hint').textContent = root
+    ? 'Корень: здесь только папки. Создайте папку или откройте существующую, чтобы загрузить файлы. Если после создания папка не появилась - подождите немного и обновите.'
+    : 'Папка /' + cur + ': перетащите файлы сюда или нажмите "+ ФАЙЛЫ". Если файл после загрузки пропал - подождите немного и обновите список.';
+
+  const p = $('#path'); p.innerHTML = '';
+  const mk = (t,h) => { const a=document.createElement('a'); a.textContent=t; a.onclick=()=>{ location.hash = h; }; return a; };
+  p.append(mk('/', ''));
+  const seg = cur ? cur.split('/') : [];
+  seg.forEach((s,i) => {
+    p.append(mk(s, '#' + enc(seg.slice(0,i+1).join('/'))));
+    if (i < seg.length-1) p.append(document.createTextNode('/'));
+  });
+
+  const dirs = new Set(), files = [];
+  for (const x of tree){
+    if (x.type!=='blob' || !x.path.startsWith(prefix)) continue;
+    const r = x.path.slice(prefix.length), i = r.indexOf('/');
+    if (i > 0){ const d = r.slice(0,i); if (d[0] !== '.') dirs.add(d); }
+    else if (!root && isOk(r)) files.push(r); 
+  }
+
+  const m = $('#main'); m.innerHTML = ''; pl = [];
+
+  if (!root){
+    const up = seg.slice(0,-1).join('/');
+    const c = document.createElement('div'); c.className = 'cell upcell';
+    const t = document.createElement('div'); t.className = 'tile ico'; t.innerHTML = I.back;
+    t.onclick = () => { location.hash = up ? '#' + enc(up) : ''; };
+    const l = document.createElement('span'); l.className = 'upl'; l.textContent = '.. назад';
+    c.append(t, l); m.append(c);
+  }
+
+  [...dirs].sort().forEach(d => {
+    const {c,t,n} = cell(I.dir, d, true);
+    t.onclick = () => { location.hash = '#' + enc(prefix + d); };
+    bindName(n, async v => {
+      const nv = clean(v); if (!nv || nv === d) { n.value = d; return false; }
+      n.value = nv;
+      return rename(prefix + d, prefix + nv);
+    });
+    m.append(c);
+  });
+
+  files.sort().forEach(f => {
+    const url = RAW + enc(prefix + f), audio = ext(f)==='mp3', idx = pl.length;
+    pl.push({url, name:f, audio});
+    const {c,t,n} = cell(audio ? I.play : `<img src="${url}" alt="" loading="lazy">`, f, audio);
+    t.onclick = () => show(idx);
+    const b = document.createElement('button'); b.className='cp'; b.innerHTML=I.cp; b.title='Копировать ссылку'; b.setAttribute('aria-label','Копировать ссылку');
+    b.onclick = e => { e.stopPropagation(); copy(SITE + enc(prefix + f), b); };
+    t.append(b);
+    const marked = dels.has(prefix + f);
+    const d = document.createElement('button'); d.className='del';
+    d.innerHTML = marked ? I.x : I.trash;
+    d.title = marked ? 'Снять отметку' : 'Отметить на удаление';
+    d.setAttribute('aria-label', d.title);
+    d.onclick = e => { e.stopPropagation(); remove(prefix + f); };
+    t.append(d);
+    if (marked){ c.classList.add('mark'); t.insertAdjacentHTML('beforeend', '<span class="tag">будет удалён</span>'); }
+    bindName(n, async v => {
+      let nv = clean(v); if (!nv) return false;
+      const e = '.' + ext(f); if (!nv.toLowerCase().endsWith(e)) nv += e;
+      if (nv === f) return false;
+      return rename(prefix + f, prefix + nv);
+    });
+    m.append(c);
+  });
+
+  pend.filter(q => q.dir === cur).forEach(q => {
+    const audio = ext(q.name)==='mp3', idx = pl.length;
+    pl.push({url:q.url, name:q.name, audio});
+    const {c,t,n} = cell((audio ? I.play : `<img src="${q.url}" alt="">`) + '<span class="tag">' + (tree.some(x => x.path === (q.dir ? q.dir + '/' : '') + q.name) ? 'заменит файл' : 'не загружено') + '</span>', q.name, audio);
+    c.classList.add('pend');
+    t.onclick = () => show(idx);
+    const b = document.createElement('button'); b.className='rm'; b.innerHTML=I.x; b.title='Убрать'; b.setAttribute('aria-label','Убрать');
+    b.onclick = e => { e.stopPropagation(); URL.revokeObjectURL(q.url); pend = pend.filter(z=>z!==q); render(); };
+    t.append(b);
+    bindName(n, async v => {
+      let nv = clean(v); if (!nv) return false;
+      const e = '.' + ext(q.name); if (!nv.toLowerCase().endsWith(e)) nv += e;
+      if (nv !== q.name && taken(q.dir, nv)){ toast('Имя занято'); return false; }
+      q.name = nv; n.value = nv; return true;
+    });
+    m.append(c);
+  });
+
+  const go = $('#go');
+  const cnt = pend.length + dels.size;
+  go.hidden = !cnt;
+  if (!busy) go.innerHTML = I.ok + '<span>Сохранить ' + cnt + '</span>';
+}
+
+/* ───────── действия ───────── */
+async function copy(text, btn){
+  try{ await navigator.clipboard.writeText(text); }
+  catch{ const a=document.createElement('textarea'); a.value=text; document.body.append(a); a.select(); document.execCommand('copy'); a.remove(); }
+  btn.innerHTML = I.ok; toast('Ссылка скопирована');
+  setTimeout(() => { btn.innerHTML = I.cp; }, 1000);
+}
+  
+function remove(P){
+  if (dels.has(P)) dels.delete(P); else dels.add(P);
+  render();
+}
+
+async function rename(P, Q){
+  if (tree.some(x => x.path===Q || x.path.startsWith(Q+'/'))){ toast('Имя занято'); return false; }
+  try{
+    const rel = tree.filter(x => x.type==='blob' && (x.path===P || x.path.startsWith(P+'/')));
+    let i = 0;
+    for (const x of rel){
+      if (rel.length > 1) toast('Переименование ' + (++i) + ' / ' + rel.length);
+      const b = await gh('/git/blobs/' + x.sha);
+      const content = b.content.replace(/\n/g, '');
+      const np = Q + x.path.slice(P.length);
+      await retry(() => put(np, content, 'rename ' + x.path + ' -> ' + np));
+      await retry(() => del(x.path, x.sha, 'rename: remove ' + x.path));
+    }
+    dels = new Set();
+    await load();
+    return true;
+  }catch(err){ toast(err.message); await load(); return false; }
+}
+
+function newFolder(){
+  if ($('#nf')) { $('#nf').focus(); return; }
+  const {c,t,n} = cell(I.dir, '', true);
+  n.id = 'nf'; n.readOnly = false; n.placeholder = 'folder-name'; t.style.borderStyle = 'dashed';
+  const up = $('#main').querySelector('.upcell');
+  if (up) up.after(c); else $('#main').prepend(c);
+  n.focus();
+  let done = false;
+  n.onkeydown = e => { if (e.key==='Enter') n.blur(); if (e.key==='Escape'){ n.value=''; n.blur(); } };
+  n.onblur = async () => {
+    if (done) return; done = true;
+    const v = clean(n.value);
+    if (!v){ c.remove(); render(); return; }
+    const P = (cur ? cur + '/' : '') + v;
+    if (taken(cur, v)){ toast('Имя занято'); c.remove(); render(); return; }
+    try{
+      await retry(() => put(P + '/.gitkeep', 'Cg==', 'folder ' + P));
+      await load();
+      location.hash = '#' + enc(P);
+    }catch(e){ toast(e.message); c.remove(); render(); }
+  };
+}
+
+function add(list){
+  if (!cur){ toast('Сначала откройте папку — в корень файлы нельзя'); return; }
+  let n = 0;
+  for (const f of list){
+    const e = EX.includes(ext(f.name)) ? ext(f.name) : MIME[f.type];
+    if (!e) continue;
+    let name = f.name.replace(/[\\/]/g, '');
+    if (!EX.includes(ext(name))) name += '.' + e;
+    const old = pend.find(q => q.dir === cur && q.name === name);
+    if (old){ URL.revokeObjectURL(old.url); pend = pend.filter(q => q !== old); }
+    pend.push({file:f, name, dir:cur, url:URL.createObjectURL(f)});
+    n++;
+  }
+  if (n) render(); else if (list.length) toast('Только png, jpg, gif, mp3');
+}
+
+async function send(){
+  if (busy || !(pend.length || dels.size)) return;
+  if (pend.some(q => !q.dir)){ toast('Файлы в корень загружать нельзя'); return; }
+  busy = true;
+  const go = $('#go'); go.disabled = true;
+  const total = pend.length + dels.size;
+  const up = new Set(pend.map(q => q.dir + '/' + q.name));
+  let n = 0, fail = 0, lastErr = '';
+
+  for (const q of [...pend]){
+    go.textContent = ++n + ' / ' + total;
+    const path = q.dir + '/' + q.name;
+    try{
+      const content = await b64(q.file);
+      await retry(() => put(path, content, 'add ' + path, shaOf(path)));
+      URL.revokeObjectURL(q.url);
+      pend = pend.filter(z => z !== q);
+    }catch(e){ fail++; lastErr = q.name + ': ' + e.message; }
+  }
+
+  for (const p of [...dels]){
+    if (up.has(p)){ dels.delete(p); continue; } 
+    go.textContent = ++n + ' / ' + total;
+    const sha = shaOf(p);
+    if (!sha){ dels.delete(p); continue; }
+    try{
+      await retry(() => del(p, sha, 'delete ' + p));
+      dels.delete(p);
+    }catch(e){ fail++; lastErr = p + ': ' + e.message; }
+  }
+
+  busy = false; go.disabled = false;
+  await load();
+  toast(fail ? 'Не вышло: ' + fail + ' (' + lastErr + ')' : 'Сохранено');
+}
+
+/* ───────── предпросмотр ───────── */
+function show(i){
+  pi = i; const x = pl[i];
+  const im = $('#pi'), au = $('#au'), pa = $('#pa');
+  $('#pv').hidden = false;
+  au.pause();
+  if (x.audio){ im.hidden = true; im.removeAttribute('src'); pa.hidden = false; au.src = x.url; au.play().catch(()=>{}); $('#pn').textContent = x.name; }
+  else        { pa.hidden = true; au.removeAttribute('src'); im.hidden = false; im.src = x.url; }
+}
+function hide(){
+  $('#pv').hidden = true; pi = -1;
+  const au = $('#au'); au.pause(); au.removeAttribute('src'); $('#pi').removeAttribute('src');
+}
+$('#pv').onclick = hide;
+$('#au').onclick = e => e.stopPropagation();
+document.addEventListener('keydown', e => {
+  if (pi < 0) return;
+  if (e.key === 'Escape') hide();
+  if (e.key === 'ArrowRight') show((pi + 1) % pl.length);
+  if (e.key === 'ArrowLeft')  show((pi - 1 + pl.length) % pl.length);
+});
+
+$('#addb').onclick = () => { if (!cur) return toast('Сначала откройте папку'); $('#fi').click(); };
+$('#fi').onchange  = e => { add(e.target.files); e.target.value = ''; };
+$('#fob').onclick  = newFolder;
+$('#go').onclick   = send;
+
+addEventListener('dragover',  e => { e.preventDefault(); if (!$('#app').hidden && cur) document.body.classList.add('d'); });
+addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('d'); });
+addEventListener('drop',      e => { e.preventDefault(); document.body.classList.remove('d'); if (!$('#app').hidden) add(e.dataTransfer.files); });
+addEventListener('paste',     e => { if (!$('#app').hidden && e.clipboardData.files.length) add(e.clipboardData.files); });
+
+const readHash = () => location.hash.slice(1).split('/').filter(Boolean).map(decodeURIComponent).join('/');
+addEventListener('hashchange', () => { cur = readHash(); render(); });
+
+/* ───────── старт ───────── */
+(async () => {
+  const t = tok();
+  if (!t) return gate();
+  try{ await check(t); enter(); }
+  catch(e){ if (!C.token) localStorage.removeItem('t'); gate(e.message); }
+})();
+</script>
+</body>
+</html>
